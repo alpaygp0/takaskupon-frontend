@@ -69,10 +69,13 @@ window.showToast = function (message, type = 'success') {
 // ==========================================
 // 🔥 GERÇEK ZAMANLI (REAL-TIME) SOCKET.IO MOTORU 🔥
 // ==========================================
-// Buraya Render linkini ekledik, böylece Vercel backend'i bulabilecek.
 const socket = typeof io !== 'undefined' ? io("https://takaskupon-backend.onrender.com", {
-    transports: ["websocket", "polling"],
-    withCredentials: true
+    transports: ["polling", "websocket"], // Render için önce polling ile başla, sonra websocket'e geç
+    withCredentials: true,
+    reconnection: true,             // Koptuğunda otomatik tekrar bağlan
+    reconnectionAttempts: 10,       // 10 kere tekrar denemeye izin ver
+    reconnectionDelay: 3000,        // Her denemede 3 saniye bekle (Render'ı boğmamak için)
+    timeout: 20000                  // Zaman aşımı süresini 20 saniyeye çıkar
 }) : null;
 
 if (socket) {
