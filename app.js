@@ -69,10 +69,15 @@ window.showToast = function (message, type = 'success') {
 // ==========================================
 // 🔥 GERÇEK ZAMANLI (REAL-TIME) SOCKET.IO MOTORU 🔥
 // ==========================================
-const socket = typeof io !== 'undefined' ? io() : null;
+// Buraya Render linkini ekledik, böylece Vercel backend'i bulabilecek.
+const socket = typeof io !== 'undefined' ? io("https://takaskupon-backend.onrender.com", {
+    transports: ["websocket", "polling"],
+    withCredentials: true
+}) : null;
 
 if (socket) {
     socket.on('connect', () => {
+        console.log("✅ Sunucuya başarıyla bağlanıldı!"); // Bağlantıyı teyit etmek için ekledik
         const userStr = localStorage.getItem('takasUser') || sessionStorage.getItem('takasUser');
         if (userStr) {
             socket.emit('register', JSON.parse(userStr)._id);
@@ -81,8 +86,13 @@ if (socket) {
 
     socket.on('realtime_notification', (data) => {
         showToast(`<strong>${data.title}</strong><br>${data.message}`, data.type);
-        loadNotifications(false);
+        
+        // Bildirim listesini yenile (Fonksiyonun mevcutsa)
+        if (typeof loadNotifications === 'function') {
+            loadNotifications(false);
+        }
 
+        // Bakiye Güncelleme İşlemleri
         if (data.newBalance !== undefined) {
             const balanceBtn = document.getElementById('headerBalance');
             if (balanceBtn) {
@@ -91,20 +101,27 @@ if (socket) {
                 setTimeout(() => balanceBtn.classList.remove('scale-110'), 1000);
             }
 
+            // Local Storage'daki kullanıcı verisini güncelle
             const userStr = localStorage.getItem('takasUser') || sessionStorage.getItem('takasUser');
             if (userStr) {
                 let userObj = JSON.parse(userStr);
                 userObj.balance = data.newBalance;
-                if (localStorage.getItem('takasUser')) localStorage.setItem('takasUser', JSON.stringify(userObj));
-                else sessionStorage.setItem('takasUser', JSON.stringify(userObj));
+                if (localStorage.getItem('takasUser')) {
+                    localStorage.setItem('takasUser', JSON.stringify(userObj));
+                } else {
+                    sessionStorage.setItem('takasUser', JSON.stringify(userObj));
+                }
             }
 
             const creditAmount = document.getElementById('userCreditAmount');
             if (creditAmount) creditAmount.textContent = data.newBalance;
         }
     });
-}
 
+    socket.on('connect_error', (error) => {
+        console.error("❌ Soket Bağlantı Hatası:", error);
+    });
+}
 // ==========================================
 // KİMLİK DOĞRULAMA (AUTH) MOTORU
 // ==========================================
